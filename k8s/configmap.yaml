@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: video-processor-auth
+data:
+  NODE_ENV: "production"
+  PORT: "3002"
+  JWT_EXPIRES_IN: "15m"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  DATABASE_URL: "postgresql://auth_user:auth_password@auth-postgres:5432/auth_db?schema=public"
+  REDIS_URL: "redis://auth-redis:6379"

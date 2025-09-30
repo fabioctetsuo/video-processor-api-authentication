@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production-make-it-longer-and-more-secure}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN:-7d}
+      - DATABASE_URL=postgresql://auth_user:auth_password@auth-postgres:5432/auth_db?schema=public
+    ports:
+      - "3002:3002"
+    networks:
+      - microservices-network
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/auth/verify || echo 'Service not ready'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    labels:
+      - "service=auth"
+      - "environment=production"
+
+  auth-postgres:
+    image: postgres:15-alpine
+    container_name: auth-postgres
+    environment:
+      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=auth_password
+    ports:
+      - "5433:5432"
+    networks:
+      - microservices-network
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d auth_db -U auth_user"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    labels:
+      - "service=auth-database"
+      - "environment=production"
+
+networks:
+  microservices-network:
+    name: microservices-network
+    driver: bridge
+    external: true
+
+volumes:
+  auth_postgres_data:
+    driver: local
+
+# Create the network if it doesn't exist
+# Run: docker network create microservices-network
